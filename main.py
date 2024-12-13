@@ -40,7 +40,7 @@ def obter_dados(ticker, intervalo):
 
 
 ##########################################################################################
-## PARTE 2: PAINEL DO STREAMLIT ##
+## PARTE 2: DASHBOARD ##
 ##########################################################################################
 
 # configuração do streamlit
@@ -63,19 +63,41 @@ with st.sidebar:
     st.subheader("Sobre")
     st.info("Desenvolvido por [escova](https://github.com/esscova) com Streamlit.")
 
-
+# paineis
 if update:
     cotacoes, info = obter_dados(ticker=ticker, intervalo=intervalo) 
 
-    col1, col2 = st.columns(2)
+    col1, col2 = st.columns([2, 1])
 
     with col1:
+        fig = go.Figure()
+
+        if grafico == 'Line':
+            fig.add_trace(
+                go.Scatter(x=cotacoes.index, y=cotacoes['Close'], name='Close')
+            )
+
+        elif grafico == 'Candlestick':
+            fig.add_trace(
+                go.Candlestick(
+                    x=cotacoes.index, 
+                    open=cotacoes['Open'], 
+                    high=cotacoes['High'], 
+                    low=cotacoes['Low'], 
+                    close=cotacoes['Close'], 
+                    name='Candlestick'
+                )
+            )
+
+        fig.update_layout(title=f'{ticker} {intervalo.upper()}')
+        st.plotly_chart(fig)
+
         st.write('Cotações')
         st.dataframe(cotacoes)
     
     with col2:
-        st.write('Informações')
-        st.text(info['nome'])
+        st.write('Informações') 
+        st.text(f"Nome: {info['nome']}")
 
 
     
