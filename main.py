@@ -16,27 +16,34 @@ logger.add("logs/debug.log", format="{time} {level} {message}", level="DEBUG", r
 ## PARTE 1: FUNÇÕES PARA OBTER E TRATAR DADOS ##
 ##########################################################################################
 def obter_dados(ticker, intervalo):
+    erro = {"Erro": f"Ticker {ticker} não encontrado."}
+    
     try: # Valid intervals: [1m, 2m, 5m, 15m, 30m, 60m, 90m, 1h, 1d, 5d, 1wk, 1mo, 3mo]
         ativo = yf.Ticker(ticker)
         if not ativo:
-            logger.error('Falha em obter dados')
-            raise 
+            logger.error(f'Ativo {ticker} nao encontrado.')
+            return pd.DataFrame(), erro
 
         cotacoes = ativo.history(period='max', interval = intervalo)
+        if cotacoes.empty:
+            logger.error(f'Nenhuma cotacao encontrada para o ativo {ticker} no intervalo {intervalo}.')
+            return pd.DataFrame(), erro
+
         logger.info('Dados de cotações obtidos com sucesso.')
 
         info = {
-            'nome':ativo.info['longName'],
-            'setor': ativo.info['sector'],
-            'segmento': ativo.info['industry'],
-            'dividend yield': ativo.info['dividendYield'],
-            'ultimo dividendo': ativo.info['lastDividendValue']
+            'nome':ativo.info.get('longName', 'N/A'),
+            'setor': ativo.info.get('sector', 'N/A'),
+            'segmento': ativo.info.get('industry', 'N/A'),
+            'dividend yield': ativo.info.get('dividendYield', 'N/A'),
+            'ultimo dividendo': ativo.info.get('lastDividendValue', 'N/A')
         }
         logger.info('Dados do ativo obtidos com sucesso.')
         return cotacoes, info
     
-    except:
-        raise
+    except Exception as e:
+        logger.error(f"Erro inesperado ao obter dados: {e}.")
+        return pd.DataFrame(), erro
 
 
 ##########################################################################################
@@ -70,34 +77,46 @@ if update:
     col1, col2 = st.columns([2, 1])
 
     with col1:
-        fig = go.Figure()
+        if cotacoes.empty:
+            st.error('Nenhuma cotação encontrada.')
 
-        if grafico == 'Line':
-            fig.add_trace(
-                go.Scatter(x=cotacoes.index, y=cotacoes['Close'], name='Close')
-            )
+        else:
+        # gráficos
+            fig = go.Figure()
 
-        elif grafico == 'Candlestick':
-            fig.add_trace(
-                go.Candlestick(
-                    x=cotacoes.index, 
-                    open=cotacoes['Open'], 
-                    high=cotacoes['High'], 
-                    low=cotacoes['Low'], 
-                    close=cotacoes['Close'], 
-                    name='Candlestick'
+            if grafico == 'Line':
+                fig.add_trace(
+                    go.Scatter(x=cotacoes.index, y=cotacoes['Close'], name='Close')
                 )
-            )
 
-        fig.update_layout(title=f'{ticker} {intervalo.upper()}')
-        st.plotly_chart(fig)
+            elif grafico == 'Candlestick':
+                fig.add_trace(
+                    go.Candlestick(
+                        x=cotacoes.index, 
+                        open=cotacoes['Open'], 
+                        high=cotacoes['High'], 
+                        low=cotacoes['Low'], 
+                        close=cotacoes['Close'], 
+                        name='Candlestick'
+                    )
+                )
 
-        st.write('Cotações')
-        st.dataframe(cotacoes)
+            fig.update_layout(title=f'{ticker} {intervalo.upper()}')
+            st.plotly_chart(fig)
+
+            st.write('Cotações')
+            st.dataframe(cotacoes)
     
     with col2:
-        st.write('Informações') 
-        st.text(f"Nome: {info['nome']}")
+        if 'Erro' not in info:
+            st.write('Informações do Ativo')
+            st.text(f"Nome: {info['nome']}")
+            st.text(f"Setor: {info['setor']}")
+            st.text(f"Segmento: {info['segmento']}")
+            st.text(f"Dividend Yield: {info['dividend yield']}")
+            st.text(f"Último Dividendo: {info['ultimo dividendo']}")
+        else:
+            st.error(info['Erro'])
 
 
     
