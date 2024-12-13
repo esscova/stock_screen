@@ -15,7 +15,7 @@ logger.add("logs/debug.log", format="{time} {level} {message}", level="DEBUG", r
 ##########################################################################################
 ## PARTE 1: FUNÇÕES PARA OBTER E TRATAR DADOS ##
 ##########################################################################################
-def obter_dados(ticker, intervalo):
+def obter_dados(ticker, intervalo, perdiodo = 'max'):
     erro = {"Erro": f"Ticker {ticker} não encontrado."}
     
     try: # Valid intervals: [1m, 2m, 5m, 15m, 30m, 60m, 90m, 1h, 1d, 5d, 1wk, 1mo, 3mo]
@@ -24,7 +24,7 @@ def obter_dados(ticker, intervalo):
             logger.error(f'Ativo {ticker} nao encontrado.')
             return pd.DataFrame(), erro
 
-        cotacoes = ativo.history(period='max', interval = intervalo)
+        cotacoes = ativo.history(period=perdiodo, interval = intervalo)
         if cotacoes.empty:
             logger.error(f'Nenhuma cotacao encontrada para o ativo {ticker} no intervalo {intervalo}.')
             return pd.DataFrame(), erro
@@ -62,7 +62,7 @@ st.title("Stocks Dashboard")
 with st.sidebar:
     st.header("Filtros")
     ticker = st.text_input("Ticker", "AAPL")
-    intervalo = st.selectbox('Período', ['1m', '2m', '5m', '15m', '30m', '90m', '1h', '1d', '5d', '1wk', '1mo', '3mo'])
+    intervalo = st.selectbox('Período', ['1m', '2m', '5m', '15m', '30m', '60m','90m', '1d', '5d', '1wk', '1mo', '3mo'])
     grafico = st.selectbox('Tipo de Gráfico', ['Line', 'Candlestick'])
     indicadores = st.multiselect('Médias móveis', ['SMA 20', 'EMA 20'])
     update = st.button('UPDATE')
@@ -72,7 +72,13 @@ with st.sidebar:
 
 # paineis
 if update:
-    cotacoes, info = obter_dados(ticker=ticker, intervalo=intervalo) 
+    if intervalo in ['1d', '5d', '1wk', '1mo', '3mo']:
+        perdiodo = 'max'
+    else:
+        perdiodo = '1d'
+
+    # obter dados
+    cotacoes, info = obter_dados(ticker=ticker, intervalo=intervalo, perdiodo=perdiodo) 
 
     col1, col2 = st.columns([2, 1])
 
@@ -101,7 +107,7 @@ if update:
                     )
                 )
 
-            fig.update_layout(title=f'{ticker} {intervalo.upper()}')
+            fig.update_layout(title=f'{ticker[:3] if ticker[:-3] == ".SA" else ticker } {intervalo.upper()}')
             st.plotly_chart(fig)
 
             st.write('Cotações')
@@ -113,8 +119,8 @@ if update:
             st.text(f"Nome: {info['nome']}")
             st.text(f"Setor: {info['setor']}")
             st.text(f"Segmento: {info['segmento']}")
-            st.text(f"Dividend Yield: {info['dividend yield']}")
-            st.text(f"Último Dividendo: {info['ultimo dividendo']}")
+            st.text(f"Dividend Yield: {(info['dividend yield']*100):.2f}%")
+            st.text(f"Último Dividendo: {round(info['ultimo dividendo'],2)}")
         else:
             st.error(info['Erro'])
 
