@@ -15,7 +15,7 @@ logger.add("logs/debug.log", format="{time} {level} {message}", level="DEBUG", r
 ##########################################################################################
 ## PARTE 1: FUNÇÕES PARA OBTER E TRATAR DADOS ##
 ##########################################################################################
-def obter_dados(ticker, intervalo, perdiodo = 'max'):
+def obter_dados(ticker, intervalo, periodo = 'max'):
     erro = {"Erro": f"Ticker {ticker} não encontrado."}
     
     try: # Valid intervals: [1m, 2m, 5m, 15m, 30m, 60m, 90m, 1h, 1d, 5d, 1wk, 1mo, 3mo]
@@ -24,7 +24,7 @@ def obter_dados(ticker, intervalo, perdiodo = 'max'):
             logger.error(f'Ativo {ticker} nao encontrado.')
             return pd.DataFrame(), erro
 
-        cotacoes = ativo.history(period=perdiodo, interval = intervalo)
+        cotacoes = ativo.history(period=periodo, interval = intervalo)
         if cotacoes.empty:
             logger.error(f'Nenhuma cotacao encontrada para o ativo {ticker} no intervalo {intervalo}.')
             return pd.DataFrame(), erro
@@ -45,6 +45,14 @@ def obter_dados(ticker, intervalo, perdiodo = 'max'):
         logger.error(f"Erro inesperado ao obter dados: {e}.")
         return pd.DataFrame(), erro
 
+def add_indicadores(df):
+    if 'SMA 20' in df.columns and 'EMA 20' in df.columns:
+        return df
+
+    df['SMA 20'] = ta.trend.sma_indicator(close=df['Close'], window=20)
+    df['EMA 20'] = ta.trend.ema_indicator(close=df['Close'], window=20)
+
+    return df
 
 ##########################################################################################
 ## PARTE 2: DASHBOARD ##
@@ -72,50 +80,50 @@ with st.sidebar:
 
 # paineis
 if update:
-    if intervalo in ['1d', '5d', '1wk', '1mo', '3mo']:
-        perdiodo = 'max'
-    else:
-        perdiodo = '1d'
-
-    # obter dados
-    cotacoes, info = obter_dados(ticker=ticker, intervalo=intervalo, perdiodo=perdiodo) 
-
-    col1, col2 = st.columns([2, 1])
-
-    with col1:
-        if cotacoes.empty:
-            st.error('Nenhuma cotação encontrada.')
-
-        else:
-        # gráficos
-            fig = go.Figure()
-
-            if grafico == 'Line':
-                fig.add_trace(
-                    go.Scatter(x=cotacoes.index, y=cotacoes['Close'], name='Close')
-                )
-
-            elif grafico == 'Candlestick':
-                fig.add_trace(
-                    go.Candlestick(
-                        x=cotacoes.index, 
-                        open=cotacoes['Open'], 
-                        high=cotacoes['High'], 
-                        low=cotacoes['Low'], 
-                        close=cotacoes['Close'], 
-                        name='Candlestick'
-                    )
-                )
-
-            fig.update_layout(title=f'{ticker[:3] if ticker[:-3] == ".SA" else ticker } {intervalo.upper()}')
-            st.plotly_chart(fig)
-
-            st.write('Cotações')
-            st.dataframe(cotacoes)
     
+    periodo = 'max' if intervalo in ['1d', '5d', '1wk', '1mo', '3mo'] else '1d'
+    cotacoes, info = obter_dados(ticker=ticker, intervalo=intervalo, periodo=periodo) 
+
+    if not cotacoes.empty:
+        cotacoes = add_indicadores(cotacoes)
+    
+    fig = go.Figure()
+    
+    for indicador in indicadores:
+        fig.add_trace(go.Scatter(x=cotacoes.index, y=cotacoes[indicador], name=indicador))
+
+       
+    if cotacoes.empty:
+        st.error('Nenhuma cotação encontrada.')
+
+    if grafico == 'Line':
+        fig.add_trace(
+            go.Scatter(x=cotacoes.index, y=cotacoes['Close'], name='Close')
+        )
+
+    elif grafico == 'Candlestick':
+        fig.add_trace(
+            go.Candlestick(
+                x=cotacoes.index, 
+                open=cotacoes['Open'], 
+                high=cotacoes['High'], 
+                low=cotacoes['Low'], 
+                close=cotacoes['Close'], 
+                name='Candlestick'
+            )
+        )
+
+    fig.update_layout(title=f'{ticker[:-3] if ticker[-3:] == ".SA" else ticker } {intervalo.upper()}')
+    st.plotly_chart(fig)
+    
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        st.subheader('Cotações', divider='red')
+        st.dataframe(cotacoes)
+
     with col2:
         if 'Erro' not in info:
-            st.write('Informações do Ativo')
+            st.subheader(ticker, divider='red')
             st.text(f"Nome: {info['nome']}")
             st.text(f"Setor: {info['setor']}")
             st.text(f"Segmento: {info['segmento']}")
@@ -123,6 +131,3 @@ if update:
             st.text(f"Último Dividendo: {round(info['ultimo dividendo'],2)}")
         else:
             st.error(info['Erro'])
-
-
-    
