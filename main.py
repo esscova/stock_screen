@@ -115,7 +115,7 @@ st.title("Stocks Dashboard")
 # menu lateral
 with st.sidebar:
     st.header("Filtros")
-    ticker = st.text_input("Ticker", "AAPL")
+    ticker = st.text_input("Ticker", "AAPL").strip().upper()
     intervalo = st.selectbox('Período', ['1m', '2m', '5m', '15m', '30m', '60m','90m', '1d', '5d', '1wk', '1mo', '3mo'])
     grafico = st.selectbox('Tipo de Gráfico', ['Line', 'Candlestick'])
     indicadores = st.multiselect('Médias móveis', ['SMA 20', 'EMA 20'])
@@ -125,7 +125,7 @@ with st.sidebar:
     st.info("Desenvolvido por [escova](https://github.com/esscova) com Streamlit.")
 
 # paineis
-if update:
+if update and ticker:
     
     periodo = 'max' if intervalo in ['1d', '5d', '1wk', '1mo', '3mo'] else '1d'
     with st.spinner('Carregando dados...'):
