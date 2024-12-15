@@ -45,14 +45,51 @@ def obter_dados(ticker, intervalo, periodo = 'max'):
         logger.error(f"Erro inesperado ao obter dados: {e}.")
         return pd.DataFrame(), erro
 
+def tratar_dados(df):
+    try:
+        colunas_requeridas = ['Open', 'High', 'Low', 'Close']
+
+        if not all(coluna in df.columns for coluna in colunas_requeridas):
+            logger.error(f"Colunas {colunas_requeridas} não encontradas no DataFrame.")
+            return pd.DataFrame()
+
+        df.fillna(method='ffill', inplace=True)
+        df.fillna(method='bfill', inplace=True)
+        logger.info('Dados tratados com sucesso.')
+
+        if not df.index.is_monotonic_increasing:
+            df = df.sort_index(ascending=True, inplace=True)
+            logger.info('Indice de datas ordenado com sucesso.')
+
+        return df
+    
+    except Exception as e:
+        logger.error(f"Erro inesperado ao tratar dados: {e}.")
+        return pd.DataFrame()
+
+
 def add_indicadores(df):
-    if 'SMA 20' in df.columns and 'EMA 20' in df.columns:
+    """
+    Adiciona médias móveis simples (SMA) e exponenciais (EMA) ao DataFrame.
+    """
+    try:
+        if 'Close' not in df.columns:
+            logger.error("Coluna 'Close' nao encontrada no DataFrame.")
+            return df
+
+        df['SMA 20'] = df['Close'].rolling(window=20, min_periods=1).mean()
+        df['EMA 20'] = df['Close'].ewm(span=20, adjust=False).mean()
+
+        df['RSI'] = ta.momentum.rsi(df['Close'], window=14)
+
+        logger.info("Indicadores técnicos adicionados com sucesso.")
+
         return df
 
-    df['SMA 20'] = ta.trend.sma_indicator(close=df['Close'], window=20)
-    df['EMA 20'] = ta.trend.ema_indicator(close=df['Close'], window=20)
+    except Exception as e:
+        logger.error(f"Erro ao adicionar indicadores técnicos: {e}")
+        return df
 
-    return df
 
 ##########################################################################################
 ## PARTE 2: DASHBOARD ##
@@ -82,16 +119,17 @@ with st.sidebar:
 if update:
     
     periodo = 'max' if intervalo in ['1d', '5d', '1wk', '1mo', '3mo'] else '1d'
-    cotacoes, info = obter_dados(ticker=ticker, intervalo=intervalo, periodo=periodo) 
+    with st.spinner('Carregando dados...'):
+        cotacoes, info = obter_dados(ticker=ticker, intervalo=intervalo, periodo=periodo) 
 
     if not cotacoes.empty:
+        cotacoes = tratar_dados(cotacoes)
         cotacoes = add_indicadores(cotacoes)
     
     fig = go.Figure()
     
     for indicador in indicadores:
         fig.add_trace(go.Scatter(x=cotacoes.index, y=cotacoes[indicador], name=indicador))
-
        
     if cotacoes.empty:
         st.error('Nenhuma cotação encontrada.')
@@ -113,8 +151,14 @@ if update:
             )
         )
 
-    fig.update_layout(title=f'{ticker[:-3] if ticker[-3:] == ".SA" else ticker } {intervalo.upper()}')
-    st.plotly_chart(fig)
+    fig.update_layout(
+        title=f'{ticker[:-3] if ticker[-3:] == ".SA" else ticker } {intervalo.upper()}',
+        xaxis_title='Data',
+        yaxis_title='Preço',
+        showlegend=True,
+        template='plotly_dark'
+    )
+    st.plotly_chart(fig,use_container_width=True)
     
     col1, col2 = st.columns([3, 1])
     with col1:
@@ -124,10 +168,7 @@ if update:
     with col2:
         if 'Erro' not in info:
             st.subheader(ticker, divider='red')
-            st.text(f"Nome: {info['nome']}")
-            st.text(f"Setor: {info['setor']}")
-            st.text(f"Segmento: {info['segmento']}")
-            st.text(f"Dividend Yield: {(info['dividend yield']*100):.2f}%")
-            st.text(f"Último Dividendo: {round(info['ultimo dividendo'],2)}")
+            for k, v in info.items():
+                st.info(f'{k}: {v}')
         else:
             st.error(info['Erro'])
