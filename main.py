@@ -47,18 +47,27 @@ def obter_dados(ticker, intervalo, periodo = 'max'):
 
 def tratar_dados(df):
     try:
-        colunas_requeridas = ['Open', 'High', 'Low', 'Close']
+        colunas = 'Open High Low Close Volume'.split()
 
-        if not all(coluna in df.columns for coluna in colunas_requeridas):
-            logger.error(f"Colunas {colunas_requeridas} não encontradas no DataFrame.")
-            return pd.DataFrame()
+        df = df[colunas]
+
+        if not isinstance(df.index, pd.DatetimeIndex):
+            df.index = pd.to_datetime(df.index)
+        
+        if df.index.tzinfo is None:
+            df.index = df.index.tz_localize('UTC')
+        
+        df.index = df.index.tz_convert('America/Sao_Paulo')
+        df.index.name = 'Date'
+        df.reset_index(inplace=True)
 
         df.fillna(method='ffill', inplace=True)
         df.fillna(method='bfill', inplace=True)
+        
         logger.info('Dados tratados com sucesso.')
 
         if not df.index.is_monotonic_increasing:
-            df = df.sort_index(ascending=True, inplace=True)
+            df.sort_index(ascending=True, inplace=True)
             logger.info('Indice de datas ordenado com sucesso.')
 
         return df
