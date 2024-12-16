@@ -18,7 +18,10 @@ logger.add("logs/debug.log", format="{time} {level} {message}", level="DEBUG", r
 def obter_dados(ticker, intervalo, periodo = 'max'):
     erro = {"Erro": f"Ticker {ticker} não encontrado."}
     
-    try: # Valid intervals: [1m, 2m, 5m, 15m, 30m, 60m, 90m, 1h, 1d, 5d, 1wk, 1mo, 3mo]
+    try: 
+        # Valid intervals: [1m, 2m, 5m, 15m, 30m, 60m, 90m, 1h, 1d, 5d, 1wk, 1mo, 3mo]
+        # Valid periods: ['1d', '5d', '1mo', '3mo', '6mo', '1y', '2y', '5y', '10y', 'ytd', 'max']
+
         ativo = yf.Ticker(ticker)
         if not ativo:
             logger.error(f'Ativo {ticker} nao encontrado.')
@@ -45,38 +48,6 @@ def obter_dados(ticker, intervalo, periodo = 'max'):
         logger.error(f"Erro inesperado ao obter dados: {e}.")
         return pd.DataFrame(), erro
 
-def tratar_dados(df):
-    try:
-        colunas = 'Open High Low Close Volume'.split()
-
-        df = df[colunas]
-
-        if not isinstance(df.index, pd.DatetimeIndex):
-            df.index = pd.to_datetime(df.index)
-        
-        if df.index.tzinfo is None:
-            df.index = df.index.tz_localize('UTC')
-        
-        df.index = df.index.tz_convert('America/Sao_Paulo')
-        df.index.name = 'Date'
-        df.reset_index(inplace=True)
-
-        df.fillna(method='ffill', inplace=True)
-        df.fillna(method='bfill', inplace=True)
-        
-        logger.info('Dados tratados com sucesso.')
-
-        if not df.index.is_monotonic_increasing:
-            df.sort_index(ascending=True, inplace=True)
-            logger.info('Indice de datas ordenado com sucesso.')
-
-        return df
-    
-    except Exception as e:
-        logger.error(f"Erro inesperado ao tratar dados: {e}.")
-        return pd.DataFrame()
-
-
 def add_indicadores(df):
     """
     Adiciona médias móveis simples (SMA) e exponenciais (EMA) ao DataFrame.
@@ -88,6 +59,7 @@ def add_indicadores(df):
 
         df['SMA 20'] = df['Close'].rolling(window=20, min_periods=1).mean()
         df['EMA 20'] = df['Close'].ewm(span=20, adjust=False).mean()
+        
 
         df['RSI'] = ta.momentum.rsi(df['Close'], window=14)
 
@@ -131,12 +103,13 @@ if update and ticker:
     with st.spinner('Carregando dados...'):
         cotacoes, info = obter_dados(ticker=ticker, intervalo=intervalo, periodo=periodo) 
 
-    if not cotacoes.empty:
-        cotacoes = tratar_dados(cotacoes)
-        cotacoes = add_indicadores(cotacoes)
+    if cotacoes.empty:
+        st.error('Nenhuma cotação encontrada.')
+
+    cotacoes = add_indicadores(cotacoes)
     
     fig = go.Figure()
-    
+
     for indicador in indicadores:
         fig.add_trace(go.Scatter(x=cotacoes.index, y=cotacoes[indicador], name=indicador))
        
@@ -166,9 +139,11 @@ if update and ticker:
         yaxis_title='Preço',
         showlegend=True,
         template='plotly_dark'
-    )
+    )  
+
     st.plotly_chart(fig,use_container_width=True)
-    
+    st.bar_chart(cotacoes['Volume'], height=200)
+
     col1, col2 = st.columns([3, 1])
     with col1:
         st.subheader('Cotações', divider='red')
