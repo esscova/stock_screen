@@ -59,7 +59,7 @@ def add_indicadores(df):
 
         df['SMA 20'] = df['Close'].rolling(window=20, min_periods=1).mean()
         df['EMA 20'] = df['Close'].ewm(span=20, adjust=False).mean()
-        
+
 
         df['RSI'] = ta.momentum.rsi(df['Close'], window=14)
 
@@ -77,12 +77,15 @@ def add_indicadores(df):
 ##########################################################################################
 
 # configuração do streamlit
-st.set_page_config(layout="wide", 
+st.set_page_config(
+    layout="wide", 
     page_title="Stocks Dashboard",
-    page_icon=":chart_with_upwards_trend:")
+    page_icon=":chart_with_upwards_trend:"
+)
 
 # cabeçalho
-st.title("Stocks Dashboard")
+st.title(":chart_with_upwards_trend: Stocks :red[Dashboard]")
+st.write("---")
 
 # menu lateral
 with st.sidebar:
@@ -100,59 +103,56 @@ with st.sidebar:
 if update and ticker:
     
     periodo = 'max' if intervalo in ['1d', '5d', '1wk', '1mo', '3mo'] else '1d'
+
     with st.spinner('Carregando dados...'):
         cotacoes, info = obter_dados(ticker=ticker, intervalo=intervalo, periodo=periodo) 
-
-    if cotacoes.empty:
-        st.error('Nenhuma cotação encontrada.')
-
+   
+    cotacoes = cotacoes.dropna()
     cotacoes = add_indicadores(cotacoes)
+
+    col1, col2 = st.columns([4, 1])
     
-    fig = go.Figure()
-
-    for indicador in indicadores:
-        fig.add_trace(go.Scatter(x=cotacoes.index, y=cotacoes[indicador], name=indicador))
-       
-    if cotacoes.empty:
-        st.error('Nenhuma cotação encontrada.')
-
-    if grafico == 'Line':
-        fig.add_trace(
-            go.Scatter(x=cotacoes.index, y=cotacoes['Close'], name='Close')
-        )
-
-    elif grafico == 'Candlestick':
-        fig.add_trace(
-            go.Candlestick(
-                x=cotacoes.index, 
-                open=cotacoes['Open'], 
-                high=cotacoes['High'], 
-                low=cotacoes['Low'], 
-                close=cotacoes['Close'], 
-                name='Candlestick'
-            )
-        )
-
-    fig.update_layout(
-        title=f'{ticker[:-3] if ticker[-3:] == ".SA" else ticker } {intervalo.upper()}',
-        xaxis_title='Data',
-        yaxis_title='Preço',
-        showlegend=True,
-        template='plotly_dark'
-    )  
-
-    st.plotly_chart(fig,use_container_width=True)
-    st.bar_chart(cotacoes['Volume'], height=200)
-
-    col1, col2 = st.columns([3, 1])
     with col1:
-        st.subheader('Cotações', divider='red')
-        st.dataframe(cotacoes)
+        fig = go.Figure()
+
+        for indicador in indicadores:
+            fig.add_trace(go.Scatter(x=cotacoes.index, y=cotacoes[indicador], name=indicador))
+        
+        if cotacoes.empty:
+            st.error('Nenhuma cotação encontrada.')
+
+        if grafico == 'Line':
+            fig.add_trace(
+                go.Scatter(x=cotacoes.index, y=cotacoes['Close'], name='Close')
+            )
+
+        elif grafico == 'Candlestick':
+            fig.add_trace(
+                go.Candlestick(
+                    x=cotacoes.index, 
+                    open=cotacoes['Open'], 
+                    high=cotacoes['High'], 
+                    low=cotacoes['Low'], 
+                    close=cotacoes['Close'], 
+                    name='Candlestick',
+                )
+            )
+    
+    
+        fig.update_layout(
+            title=f'{ticker[:-3] if ticker[-3:] == ".SA" else ticker } {intervalo.upper()}',
+            xaxis_title='Data',
+            yaxis_title='Preço',
+            showlegend=True,
+            template='plotly_dark'
+        )  
+
+        st.plotly_chart(fig,use_container_width=True)
+        st.bar_chart(cotacoes['Volume'], height=200)
 
     with col2:
         if 'Erro' not in info:
-            st.subheader(ticker, divider='red')
             for k, v in info.items():
                 st.info(f'{k}: {v}')
         else:
-            st.error(info['Erro'])
+            st.error(info['Erro'])     
