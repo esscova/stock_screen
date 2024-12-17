@@ -141,6 +141,7 @@ if update and ticker:
     
         fig.update_layout(
             title=f'{ticker[:-3] if ticker[-3:] == ".SA" else ticker } {intervalo.upper()}',
+            xaxis_rangeslider_visible=False,
             xaxis_title='Data',
             yaxis_title='Preço',
             showlegend=True,
