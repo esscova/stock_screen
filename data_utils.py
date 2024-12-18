@@ -16,8 +16,10 @@ class DataUtils:
             if not self.ativo:
                 logger.error(f'Ativo {self.ticker} nao encontrado.')
                 return pd.DataFrame()
+            
+            periodo = 'max' if self.intervalo in ['1d', '5d', '1wk', '1mo', '3mo'] else '1d'
 
-            dados_de_cotacoes = self.ativo.history(period='max', interval = self.intervalo)
+            dados_de_cotacoes = self.ativo.history(period=periodo, interval = self.intervalo)
 
             if dados_de_cotacoes.empty:
                 logger.error('Nenhuma cotacao encontrada para o ativo.')

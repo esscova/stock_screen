@@ -37,10 +37,10 @@ with st.sidebar:
 # paineis
 if update and ticker:
     
-    periodo = 'max' if intervalo in ['1d', '5d', '1wk', '1mo', '3mo'] else '1d'
-
     with st.spinner('Carregando dados...'):
-        cotacoes, info = obter_dados(ticker=ticker, intervalo=intervalo, periodo=periodo) 
+        dados = DataUtils(ticker, intervalo)
+        cotacoes = dados.fetch_cotacoes()
+        info = dados.fetch_data()
    
     cotacoes = cotacoes.dropna()
     cotacoes = add_indicadores(cotacoes)
@@ -49,7 +49,7 @@ if update and ticker:
     
     with col1:
         fig = go.Figure()
-
+        st.subheader(f'Cotação: {round(cotacoes['Close'].iloc[-1],2)}')
         for indicador in indicadores:
             fig.add_trace(go.Scatter(x=cotacoes.index, y=cotacoes[indicador], name=indicador))
         
@@ -75,7 +75,7 @@ if update and ticker:
     
     
         fig.update_layout(
-            title=f'{ticker[:-3] if ticker[-3:] == ".SA" else ticker } {intervalo.upper()}',
+            title=f'{ticker[:-3] if ticker[-3:] == ".SA" else ticker } {intervalo}',
             xaxis_rangeslider_visible=False,
             xaxis_title='Data',
             yaxis_title='Preço',
