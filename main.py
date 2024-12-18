@@ -3,78 +3,13 @@
 import streamlit as st
 import plotly.express as px
 import plotly.graph_objects as go
-import pandas as pd
-import yfinance as yf
-from datetime import datetime, timedelta
-import ta
 from loguru import logger
 
+from data_utils import DataUtils
+from indicadores import add_indicadores
+
 # configuração de logs
-logger.add("logs/debug.log", format="{time} {level} {message}", level="DEBUG", rotation="1 MB", compression="zip")
-
-##########################################################################################
-## PARTE 1: FUNÇÕES PARA OBTER E TRATAR DADOS ##
-##########################################################################################
-def obter_dados(ticker, intervalo, periodo = 'max'):
-    erro = {"Erro": f"Ticker {ticker} não encontrado."}
-    
-    try: 
-        # Valid intervals: [1m, 2m, 5m, 15m, 30m, 60m, 90m, 1h, 1d, 5d, 1wk, 1mo, 3mo]
-        # Valid periods: ['1d', '5d', '1mo', '3mo', '6mo', '1y', '2y', '5y', '10y', 'ytd', 'max']
-
-        ativo = yf.Ticker(ticker)
-        if not ativo:
-            logger.error(f'Ativo {ticker} nao encontrado.')
-            return pd.DataFrame(), erro
-
-        cotacoes = ativo.history(period=periodo, interval = intervalo)
-        if cotacoes.empty:
-            logger.error(f'Nenhuma cotacao encontrada para o ativo {ticker} no intervalo {intervalo}.')
-            return pd.DataFrame(), erro
-
-        logger.info('Dados de cotações obtidos com sucesso.')
-
-        info = {
-            'nome':ativo.info.get('longName', 'N/A'),
-            'setor': ativo.info.get('sector', 'N/A'),
-            'segmento': ativo.info.get('industry', 'N/A'),
-            'dividend yield': ativo.info.get('dividendYield', 'N/A'),
-            'ultimo dividendo': ativo.info.get('lastDividendValue', 'N/A')
-        }
-        logger.info('Dados do ativo obtidos com sucesso.')
-        return cotacoes, info
-    
-    except Exception as e:
-        logger.error(f"Erro inesperado ao obter dados: {e}.")
-        return pd.DataFrame(), erro
-
-def add_indicadores(df):
-    """
-    Adiciona médias móveis simples (SMA) e exponenciais (EMA) ao DataFrame.
-    """
-    try:
-        if 'Close' not in df.columns:
-            logger.error("Coluna 'Close' nao encontrada no DataFrame.")
-            return df
-
-        df['SMA 20'] = df['Close'].rolling(window=20, min_periods=1).mean()
-        df['EMA 20'] = df['Close'].ewm(span=20, adjust=False).mean()
-
-
-        df['RSI'] = ta.momentum.rsi(df['Close'], window=14)
-
-        logger.info("Indicadores técnicos adicionados com sucesso.")
-
-        return df
-
-    except Exception as e:
-        logger.error(f"Erro ao adicionar indicadores técnicos: {e}")
-        return df
-
-
-##########################################################################################
-## PARTE 2: DASHBOARD ##
-##########################################################################################
+logger.add("logs/main.log", format="{time} {level} {message}", level="DEBUG", rotation="1 MB", compression="zip")
 
 # configuração do streamlit
 st.set_page_config(

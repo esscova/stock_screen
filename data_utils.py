@@ -5,10 +5,11 @@ from loguru import logger
 logger.add("logs/data_utils.log", format="{time} {level} {message}", level="DEBUG", rotation="1 MB", compression="zip")
 
 class DataUtils:
-    def __init__(self, ticker,intervalo):
-        self.ativo = yf.Ticker(ticker, interval=intervalo, period='max')
+    def __init__(self, ticker, intervalo):
+        self.ativo = yf.Ticker(ticker)
+        self.intervalo = intervalo
 
-    def fetch_data(self):
+    def fetch_cotacoes(self):
 
         try:
 
@@ -16,21 +17,20 @@ class DataUtils:
                 logger.error(f'Ativo {self.ticker} nao encontrado.')
                 return pd.DataFrame()
 
-            dados_de_cotacoes = self.ativo.history()
+            dados_de_cotacoes = self.ativo.history(period='max', interval = self.intervalo)
 
             if dados_de_cotacoes.empty:
                 logger.error('Nenhuma cotacao encontrada para o ativo.')
                 return pd.DataFrame()
 
             logger.info('Dados de cotações obtidos com sucesso.')
-
             return dados_de_cotacoes
 
         except Exception as e:
             logger.error(f'Erro ao obter dados de cotações do ativo: {e}')
             return pd.DataFrame()
         
-    def fetch_info(self):
+    def fetch_data(self):
         try:
             if not self.ativo:
                 logger.error('Ativo nao encontrado.')
@@ -49,3 +49,4 @@ class DataUtils:
         except Exception as e:
             logger.error(f'Erro ao obter dados do ativo: {e}')
             return pd.DataFrame()
+        
