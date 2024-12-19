@@ -1,7 +1,9 @@
 FROM python:3.11-slim
 
-ENV PYTHONDONTWRITEBYTECODE=1 # nao gera arquivos .pyc
-ENV PYTHONUNBUFFERED=1 # nao buffera a saida
+# nao gera arquivos .pyc
+ENV PYTHONDONTWRITEBYTECODE=1 
+# nao buffera a saida
+ENV PYTHONUNBUFFERED=1 
 
 # dependências necessárias do sistema
 RUN apt-get update && apt-get install -y --no-install-recommends \

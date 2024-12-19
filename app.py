@@ -32,7 +32,23 @@ with st.sidebar:
     update = st.button('UPDATE')
 
     st.subheader("Sobre")
-    st.info("Desenvolvido por [escova](https://github.com/esscova) com Streamlit.")
+    st.info("Isto não é uma recomendação de investimentos e sim uma ferramenta de visualização de dados.")
+
+    # links para github e linkedin
+    st.markdown(
+        """
+        <div style="display: flex; align-items: center; justify-content: end;">
+            <a href="https://github.com/esscova" target="_blank" style="margin-right: 10px;">
+                <img src="https://img.shields.io/badge/GitHub-100000?style=for-the-badge&logo=github&logoColor=white" style='height: 30px;' alt="GitHub">
+            </a>
+            <a href="https://www.linkedin.com/in/wellington-moreira-santos/" target="_blank">
+                <img src="https://img.shields.io/badge/LinkedIn-%230077B5.svg?&style=for-the-badge&logo=linkedin&logoColor=white" style='height: 30px;' alt="LinkedIn">
+            </a>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
 
 # paineis
 if update and ticker:
