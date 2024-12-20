@@ -60,12 +60,13 @@ if update and ticker:
    
     cotacoes = cotacoes.dropna()
     cotacoes = add_indicadores(cotacoes)
+    preco_atual = round(cotacoes['Close'].iloc[-1], 2)
 
     col1, col2 = st.columns([4, 1])
     
     with col1:
         fig = go.Figure()
-        st.subheader(f'Cotação: {round(cotacoes['Close'].iloc[-1],2)}')
+        st.subheader(f'Preço Atual: {preco_atual:.2f}')
         for indicador in indicadores:
             fig.add_trace(go.Scatter(x=cotacoes.index, y=cotacoes[indicador], name=indicador))
         
